@@ -1,0 +1,230 @@
+	<template>
+		<div>
+		<!-- 	<div class="action_bar">
+				<text class="action_bar_title">看看日报</text>
+			</div>
+		-->
+		<!-- <list class="list" @loadmore="load_more" setloadmoreoffset = "40"> -->
+			<list class="list">
+				<refresh class="loading" @refresh="on_refresh" :display="is_refreshing ? 'show' : 'hide'">
+					<loading-indicator class="indicator"></loading-indicator>
+				</refresh>
+				<cell>
+					<slider class="banner_slide" auto-play="true" interval="3000">
+						<div class="banner_frame" v-for="image in banner_list">
+							<image class= "banner_img" resize="cover" :src="change_img_url(image.image)"></image>
+							<text class="banner_title">{{image.title}}</text>
+						</div>
+						<indicator class= "banner_indicator"></indicator>
+					</slider>
+				</cell>
+				<cell v-for="item in list">
+					<div class = "frame" @click ="on_click(item.id)">
+						<image class="item_image"  :src="change_img_url(item.images[0])"/>
+						<div class="panel">
+							<text class="item">{{item.title}}</text>
+						</div>
+					</div>
+				</cell>
+				<loading class="loading" @loading="on_loading" :display="is_loadinging ? 'show' : 'hide'">
+					<!-- <text class="indicator-text">Loading ...</text> -->
+					<loading-indicator class="indicator"></loading-indicator>
+				</loading>
+			</list>
+
+		</div>
+	</template>
+
+	<script type="text/javascript">
+		var stream = weex.requireModule("stream");
+		const modal = weex.requireModule("modal");
+		export default{
+			data:{
+				list:[],
+				banner_list:[],
+				span:1,
+				is_loadinging:false,
+				is_refreshing:false,
+				date:""
+			},
+			methods:{
+				change_img_url:function(url){
+					return url.replace(/https/, "http");
+				},
+				load_data:function(){
+					var me = this;
+					var HOME_LIST_DATA_URL = "http://news-at.zhihu.com/api/4/news/latest";
+					var STUDY_URL = "http://cdn.zwwill.com/yanxuan/api/topic/articles";
+					stream.fetch({
+						method: 'GET',
+						url: HOME_LIST_DATA_URL,
+						type:'json'
+					}, function(ret) {
+						if(!ret.ok){
+							me.toast("failed");
+							me.is_refreshing = false;
+						}else{
+							let data = ret.data;
+							me.list = data.stories;
+							me.banner_list = data.top_stories;
+							me.is_refreshing =false;
+							me.date = data.date;
+						}
+					},function(response){
+					});
+				},
+				load_more:function(){
+					var me = this;
+					var HOME_LIST_DATA_URL = "http://news-at.zhihu.com/api/4/news/before/";
+					setTimeout(() => {
+						stream.fetch({
+							method: 'GET',
+							url: HOME_LIST_DATA_URL+this.date,
+							type:'json'
+						}, function(ret) {
+							if(!ret.ok){
+								me.toast("failed");
+								me.is_loadinging = false;
+							}else{
+								let data = ret.data;
+								me.list = me.list.concat(data.stories);
+								me.is_loadinging = false;
+								me.date = data.date;
+							}
+						},function(response){
+						});
+					}, 800)
+					
+				},
+				fetch(event){
+					var me = this;
+					me.toast("here");
+				},
+				toast:function(content){
+					modal.toast({
+						message:content,
+						duration: 0.8
+					})
+				},
+				on_click:function(id){
+					this.toast(id);
+				},
+				on_loading:function(){
+					this.is_loadinging = true;
+					this.load_more();
+				},
+				on_refresh:function(){
+					this.is_refreshing = true;
+					this.load_data();
+				}
+
+			},
+			created:function(){
+				this.load_data();
+			}
+
+		}
+	</script>
+	<style type="text/css">
+	.item{
+		text-align: left;
+		color: #ffffff;
+		font-size: 40px;
+	}
+	.frame{
+		height: 200px;
+		width: 700px;
+		margin-left: 25px;
+		margin-top: 10px;
+		margin-bottom: 10px;
+		border-width: 2px;
+		border-color: #000000;
+		border-style: solid;
+		border-radius: 10px;
+		padding-top:8px;
+		padding-left:10px;
+		padding-right:10px;
+		background-color: #666666;
+		flex-direction: row; 
+		
+	}
+	.list{
+		background-color: #222222;
+	}
+	.action_bar{
+		background-color: #333333;
+		width: 750px;
+		height: 100px;
+		padding-top: 25px;
+		padding-left: 10px;
+		justify-content: flex-start;
+	}
+	.action_bar_title{
+		color: #ffffff;
+		font-size: 40px;
+	}
+	.item_image{
+		height: 180px;
+		width: 180px;
+		border-radius:10px;
+	}
+	.banner_slide{
+		height: 450px;
+		width: 750px;
+	}
+	.banner_img{
+		height: 450px;
+		width: 750px;
+	}
+	.banner_frame{
+		height: 450px;
+		width: 750px;
+		position: relative;
+	}	
+	.banner_indicator{
+		width: 750px;
+		height: 450px;
+		item-color: #ffffff;
+		item-selected-color: #666666;
+		item-size: 14px;
+		position: absolute;
+		top:190px;
+	}
+	.panel{
+		width: 500px;
+		height: 180px;
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+	.banner_title{
+		position: absolute;
+		top: 350px;
+		height: 200px;
+		padding-left: 10px;
+		width: 750px;
+		color: #FFFFFF;
+		font-size: 32px;
+		background-color: rgba(0, 0, 0, 0.3);
+	}
+	.loading {
+		width: 750;
+		display: -ms-flex;
+		display: -webkit-flex;
+		display: flex;
+		-ms-flex-align: center;
+		-webkit-align-items: center;
+		-webkit-box-align: center;
+		align-items: center;
+	}
+	.indicator-text {
+		color: #888888;
+		font-size: 42px;
+		text-align: center;
+	}
+	.indicator {
+		margin-top: 16px;
+		height: 40px;
+		width: 40px;
+		color: black;
+	}
+</style>
